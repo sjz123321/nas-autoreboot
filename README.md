@@ -3,6 +3,8 @@ esp8266 nas autoreboot tool
 
 基于esp8266的家用nas自动（远程）重启工具
 
+其中 reset_GPIO `GPIO5`
+
 # Work flow chart
 
 [![flow chart](./pic/chart.png "flow chart")](./pic/chart.png "flow chart")
