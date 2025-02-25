@@ -1,57 +1,68 @@
-# nas-autoreboot
-esp8266 nas autoreboot tool  
+# NAS AutoReboot
 
-基于esp8266的家用nas自动（远程）重启工具
+[中文文档](./README_zh.md)
 
-其中 reset_GPIO `GPIO5`
+An ESP8266-based automatic/remote reboot tool for home NAS systems.
 
-# Work flow chart
+## Features
+
+- Serial port timeout monitoring and auto-reboot
+- Remote reboot capability via HTTP requests
+- Easy configuration and deployment
+
+## Hardware Requirements
+
+- ESP8266 core board
+- USB to Serial converter (WCH CH340, driver-free on Debian)
+- Reset pin connected to GPIO5
+
+## System Architecture
 
 [![flow chart](./pic/chart.png "flow chart")](./pic/chart.png "flow chart")
 
-# 文件列表
+## Components
 
-### wificlient.ino
+### 1. ESP8266 Arduino Program (`wificlient.ino`)
 
-esp8266 arduino 程序文件
+Required configuration:
+- Replace all `<??>` tags with your settings:
+  - `host`
+  - `host_port`
+  - `wifi_ssid`
+  - `wifi_password`
 
-需要替换文件中的所有`<??>`标签 包括`host` `host_port` `wifi_ssid` `wifi_password`
+#### Serial Monitoring Mode
+- Baud rate: 9600
+- Timeout threshold: 300 seconds
+- Sends "monitor mode" text every second
+- Waits for heartbeat response
+- Auto-reboot on timeout
 
-#### 串口超时重启
+#### Remote Reboot Mode
+- Polls `http://{host}:{host_port}/read` every 400 seconds
+- Triggers reboot when response is `reset=1`
+- Automatically resets flag via `/clear_reset` after reboot
 
-其中硬件采用esp8266 core board USB转串口芯片为WCH CH340 在Debian中免驱.
+### 2. Serial Port Monitor (`serial_test.c`)
 
-程序默认波特率为9600 默认串口超时时间为`300S`
+- Monitors `/dev/ttyUSB0` by default
+- Responds with "OK!" when receiving "monitor mode"
 
-每秒钟向串口发送文本`monitor mode` 并检测串口回传心跳包 超时则重启设备
+### 3. Remote Reboot Server (`remote_reboot.c`)
 
-注意：nas端需部署串口监听工具 `serial_test.c`
+Default port: 8765
 
-#### 远程重启
+Endpoints:
+- `/read` - Get reset flag status
+- `/clear_reset` - Clear reset flag (set to 0)
+- `/set_reset` - Set reset flag (set to 1)
 
-通过远程访问`http://{host}:{host_port}/read` 判断是否需要强制重启本地主机
+## Hardware Schematic
 
-每隔`400S`进行一次判定
-
-返回值为`reset=1`时重启设备,并访问`http://{host}:{host_port}/clear_reset`将`reset`标志复位
-
-注意：服务器端需部署远程重启监听工具 `remote_reboot.c`
-
-### serial_test.c
-
-默认监听`/dev/ttyUSB0`设备 
-
-当接收到`monitor mode`文本后自动返回`OK!`
-
-### remote_reboot.c
-
-默认监听`8765`端口
-
-`/read`为读取当前reset标志位
-
-`/clear_reset`将`reset`标志复位(reset=0)
-
-`/set_reset`将`reset`标志置位(reset=1)
-
-# ESP8266核心板原理图
 [![sch_pic](./pic/sch.png "sch_pic")](./pic/sch.png "sch_pic")
+
+## File List
+
+1. `wificlient.ino` - ESP8266 Arduino program
+2. `serial_test.c` - Serial port monitoring service
+3. `remote_reboot.c` - Remote reboot HTTP server
